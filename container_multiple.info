@@ -1,2 +1,4 @@
-name = Container Multiple
+name = Container multiple
+description = Provides multiple form elements
+core = 7.x
 
