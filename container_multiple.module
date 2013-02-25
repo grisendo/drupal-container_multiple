@@ -21,7 +21,11 @@ function container_multiple_menu_demo() {
     '#type' => 'container_multiple',
     '#title' => 'Foo',
     '#id' => 'dale',
-    '#default_value' => array('group_0'=>array('asdf' =>'fo')),
+    '#default_value' => array(
+      'group_0' => array(
+        'asdf' =>'fo',
+      ),
+    ),
   );
   $form['dale']['asdf'] = array(
     '#type' => 'textfield',
@@ -124,7 +128,7 @@ function container_multiple_element_process($element, &$form_state, $complete_fo
         'class' => array(
           $element['#id'] . '-delta',
         ),
-      )
+      ),
     );
     // TO-DO: IF $element['#hierarchical'] ...
   }
@@ -206,8 +210,8 @@ function container_multiple_element_process($element, &$form_state, $complete_fo
   $element['container_multiple_operations'] = array(
     '#tree' => TRUE,
   );
-  // TO-DO: Máximo!!!
 
+  // TO-DO: Máximo!!!
   $ajax = array(
     'callback' => 'container_multiple_element_change_callback',
     'wrapper' => $element['#id'] . '-wrapper',
