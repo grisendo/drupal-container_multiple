@@ -23,7 +23,7 @@ function container_multiple_menu_demo() {
     '#id' => 'dale',
     '#default_value' => array(
       'group_0' => array(
-        'asdf' =>'fo',
+        'asdf' => 'fo',
       ),
     ),
   );
@@ -236,10 +236,16 @@ function container_multiple_element_process($element, &$form_state, $complete_fo
     '#process' => array('ajax_process_form'),
     '#ajax' => $ajax,
   );
-  $element['container_multiple_operations']['add_' . $element['#id']]['#attached']['js'] = array(array(
-    'type' => 'setting', 
-    'data' => array('ajax' => array('op_add_' . $element['#id'] => $settings)),
-  ));
+  $element['container_multiple_operations']['add_' . $element['#id']]['#attached']['js'] = array(
+    array(
+      'type' => 'setting',
+      'data' => array(
+        'ajax' => array(
+          'op_add_' . $element['#id'] => $settings,
+        ),
+      ),
+    ),
+  );
   if ($form_state['container_multiple'][$element['#id']] > 1) {
     // TO-DO: Mínimo!!!
     $ajax = array(
