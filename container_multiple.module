@@ -1,0 +1,394 @@
+<?php
+
+function container_multiple_menu() {
+
+  $items = array();
+  $items['admin/container-multiple-demo'] = array(
+    'title' => 'Container multiple demo',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('container_multiple_menu_demo'),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+
+}
+
+function container_multiple_menu_demo() {
+
+  $form = array();
+  $form['dale'] = array(
+    '#type' => 'container_multiple',
+    '#title' => 'Foo',
+    '#id' => 'dale',
+    '#default_value' => array('group_0'=>array('asdf' =>'fo')),
+  );
+  $form['dale']['asdf'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Bar',
+  );
+  $form['toma'] = array(
+    '#type' => 'container_multiple',
+    '#add_children_text' => 'Add another toma',
+    '#remove_children_text' => 'Remove last toma',
+    '#title' => 'Bar',
+    '#id' => 'toma',
+    '#weighted' => TRUE,
+  );
+  $form['toma']['foo2'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Bar2',
+    '#required' => TRUE,
+  );
+  $form['toma']['foo3'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Bar3',
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Send'),
+  );
+  return $form;
+
+}
+
+function container_multiple_sort($item) {
+
+  unset($item['container_multiple_operations']);
+  uasort(
+    $item,
+    function ($a, $b) {
+      if (!isset($a['delta']) && !isset($b['delta'])) {
+        return 0;
+      }
+      if (!isset($a['delta'])) {
+        return -1;
+      }
+      if (!isset($b['delta'])) {
+        return 1;
+      }
+      if ($a['delta'] > $b['delta']) {
+        return 1;
+      }
+      elseif ($a['delta'] < $b['delta']) {
+        return -1;
+      }
+      else {
+        return 0;
+      }
+    }
+  );
+
+  return $item;
+
+}
+
+function container_multiple_menu_demo_submit($form, &$form_state) {
+
+  $sorted = container_multiple_sort($form_state['values']['toma']);
+  kpr($sorted);
+  die;
+
+}
+
+function container_multiple_element_info() {
+
+  $types = array();
+  $types['container_multiple'] = array(
+    '#input' => FALSE,
+    '#process' => array('container_multiple_element_process'),
+    '#theme' => 'container_multiple',
+    '#tree' => TRUE,
+  );
+
+  return $types;
+
+}
+
+function container_multiple_element_process($element, &$form_state, $complete_form) {
+
+  $children = array();
+  $children_keys = array();
+
+  if (!isset($element['#weighted'])) {
+    $element['#weighted'] = FALSE;
+  }
+  if (!isset($element['#hierarchical'])) {
+    $element['#hierarchical'] = FALSE;
+  }
+
+  if ($element['#weighted']) {
+    $element['delta'] = array(
+      '#type' => 'textfield',
+      '#attributes' => array(
+        'class' => array(
+          $element['#id'] . '-delta',
+        ),
+      )
+    );
+    // TO-DO: IF $element['#hierarchical'] ...
+  }
+
+  foreach ($element as $key => $value) {
+    if ($key === '' || $key[0] !== '#') {
+      $children[$key] = $value;
+      unset($element[$key]);
+      $children_keys[$key] = isset($value['#title']) ? $value['#title'] : $key;
+      if (isset($value['#required']) && $value['#required']) {
+        $children_keys[$key] .= theme(
+          'form_required_marker',
+          array(
+            'element' => $value,
+          )
+        );
+      }
+    }
+  }
+
+  $element['#children_keys'] = $children_keys;
+
+  if (!isset($element['#add_children_text'])) {
+    $element['#add_children_text'] = 'Add element';
+  }
+  if (!isset($element['#remove_children_text'])) {
+    $element['#remove_children_text'] = 'Remove element';
+  }
+
+  $element['#theme'] = 'container_multiple';
+  $element['#prefix'] = '<div id="' . $element['#id'] . '-wrapper">';
+  $element['#suffix'] = '</div>';
+
+  $element['#attached']['library'][] = array('system', 'jquery.form');
+  $element['#attached']['library'][] = array('system', 'drupal.ajax');
+
+  // TO-DO: Default values!!!
+  if (!isset($form_state['container_multiple'][$element['#id']])) {
+    // TO-DO: Mínimo!!!
+    $form_state['container_multiple'][$element['#id']] = 1;
+  }
+  $max_weight = 0;
+  for ($i = 0; $i < $form_state['container_multiple'][$element['#id']]; $i++) {
+    $cloned_children = $children;
+    $element['group_' . $i] = array(
+      '#input' => TRUE,
+      '#type' => 'fieldset',
+      '#title' => $element['#title'] . ' (' . $i . ')',
+      '#tree' => TRUE,
+      '#prefix' => '<div id="' . $element['#id'] . '-' . $i . '-wrapper">',
+      '#suffix' => '</div>',
+    );
+    foreach ($cloned_children as $key => $value) {
+      $element['group_' . $i][$key] = $value;
+      if (isset($element['#default_value']['group_' . $i][$key])) {
+        $element['group_' . $i][$key]['#default_value'] = $element['#default_value']['group_' . $i][$key];
+      }
+      elseif (isset($element['#default_value'][$i][$key])) {
+        $element['group_' . $i][$key]['#default_value'] = $element['#default_value'][$i][$key];
+      }
+      else {
+        $element['group_' . $i][$key]['#default_value'] = '';
+      }
+      if ($element['#weighted']) {
+        if (isset($form_state['values'][$element['#id']]['group_' . $i]['delta'])) {
+          $current_weight = $form_state['values'][$element['#id']]['group_' . $i]['delta'];
+          $element['group_' . $i]['#weight'] = $current_weight;
+          if ($current_weight >= $max_weight) {
+            $max_weight = $current_weight;
+          }
+        }
+      }
+    }
+  }
+  if ($element['#weighted']) {
+    $last = $form_state['container_multiple'][$element['#id']] - 1;
+    $element['group_' . $last]['#weight'] = $max_weight + 1;
+  }
+  $element['container_multiple_operations'] = array(
+    '#tree' => TRUE,
+  );
+  // TO-DO: Máximo!!!
+
+  $ajax = array(
+    'callback' => 'container_multiple_element_change_callback',
+    'wrapper' => $element['#id'] . '-wrapper',
+    'event' => 'mousedown',
+    'keypress' => TRUE,
+    'prevent' => 'click',
+  );
+  $settings = $ajax;
+  $settings += array(
+    'path' => 'system/ajax',
+    'options' => array(),
+  );
+  $settings['url'] = url($settings['path'], $settings['options']);
+  unset($settings['path'], $settings['options']);
+  $element['container_multiple_operations']['add_' . $element['#id']] = array(
+    '#type' => 'submit',
+    '#value' => t($element['#add_children_text']),
+    '#submit' => array('container_multiple_element_change_callback_add'),
+    '#name' => 'container_multiple_op_' . $element['#id'],
+    '#id' => 'container_multiple_op_add_' . $element['#id'],
+    '#attributes' => array('id' => 'container_multiple_op_add_' . $element['#id']),
+    '#process' => array('ajax_process_form'),
+    '#ajax' => $ajax,
+  );
+  $element['container_multiple_operations']['add_' . $element['#id']]['#attached']['js'] = array(array(
+    'type' => 'setting', 
+    'data' => array('ajax' => array('op_add_' . $element['#id'] => $settings)),
+  ));
+  if ($form_state['container_multiple'][$element['#id']] > 1) {
+    // TO-DO: Mínimo!!!
+    $ajax = array(
+      'callback' => 'container_multiple_element_change_callback',
+      'wrapper' => $element['#id'] . '-wrapper',
+      'event' => 'mousedown',
+      'keypress' => TRUE,
+      'prevent' => 'click',
+    );
+    $settings = $ajax;
+    $settings += array(
+      'path' => 'system/ajax',
+      'options' => array(),
+    );
+    $settings['url'] = url($settings['path'], $settings['options']);
+    unset($settings['path'], $settings['options']);
+    $settings['submit']['_triggering_element_name'] = 'op_' . $element['#id'];
+    $element['container_multiple_operations']['remove_' . $element['#id']] = array(
+      '#type' => 'submit',
+      '#value' => t($element['#remove_children_text']),
+      '#submit' => array('container_multiple_element_change_callback_remove'),
+      '#name' => 'container_multiple_op_' . $element['#id'],
+      '#id' => 'container_multiple_op_remove_' . $element['#id'],
+      '#attributes' => array('id' => 'container_multiple_op_remove_' . $element['#id']),
+      '#process' => array('ajax_process_form'),
+      '#ajax' => $ajax,
+    );
+    $element['container_multiple_operations']['remove_' . $element['#id']]['#attached']['js'] = array(array(
+      'type' => 'setting', 
+      'data' => array('ajax' => array('op_remove_' . $element['#id'] => $settings)),
+    ));
+  }
+  return $element;
+
+}
+
+function _container_multiple_get_field($form_state) {
+
+  $parents = $form_state['clicked_button']['#parents'];
+  $last_parent = NULL;
+  foreach ($parents as $parent) {
+    if ($parent == 'container_multiple_operations') {
+      return $last_parent;
+    }
+    $last_parent = $parent;
+  }
+  return NULL;
+
+}
+
+function _container_multiple_get_hierarchy($form, $form_state) {
+
+  $parents = $form_state['clicked_button']['#parents'];
+  $found_parents = array();
+  foreach ($parents as $parent) {
+    if ($parent == 'container_multiple_operations') {
+      break;
+    }
+    $found_parents[] = $parent;
+  }
+  $form_snake = $form;
+  for ($i = 0; $i < count($found_parents); $i++) {
+    $form_snake = $form_snake[$found_parents[$i]];
+  }
+  return $form_snake;
+
+}
+
+function container_multiple_element_change_callback($form, $form_state) {
+
+  $element = _container_multiple_get_hierarchy($form, $form_state);
+  return $element;
+
+}
+
+function container_multiple_element_change_callback_add($form, &$form_state) {
+
+  $element = _container_multiple_get_field($form_state);
+  $form_state['container_multiple'][$element]++;
+  // TO-DO: Máximo!!!
+  $form_state['rebuild'] = TRUE;
+
+}
+
+function container_multiple_element_change_callback_remove($form, &$form_state) {
+
+  $element = _container_multiple_get_field($form_state);
+  if ($form_state['container_multiple'][$element] > 1) {
+    $form_state['container_multiple'][$element]--;
+  }
+  // TO-DO: Mínimo!!!
+  $form_state['rebuild'] = TRUE;
+
+}
+
+function container_multiple_theme() {
+
+  return array(
+    'container_multiple' => array(
+      'render element' => 'element',
+    ),
+  );
+
+}
+
+function theme_container_multiple($variables) {
+
+  $element = $variables['element'];
+
+  if ($element['#weighted']) {
+    $header = array();
+    $rows = array();
+    foreach ($element['#children_keys'] as $children_key => $children_title) {
+      $header[] = $children_title;
+    }
+    foreach ($element as $subkey => $subelement) {
+      if (strpos($subkey, 'group_') === 0) {
+        $row = array();
+        foreach ($element['#children_keys'] as $children_key => $children_title) {
+          if (isset($element[$subkey][$children_key]['#title'])) {
+            unset($element[$subkey][$children_key]['#title']);
+          }
+          $row[] = drupal_render($element[$subkey][$children_key]);
+        }
+        $row = array(
+          'data' => $row,
+          'class' => array('draggable'),
+        );
+        $rows[] = $row;
+      }
+    }
+    //drupal_add_tabledrag('menu-overview', 'match', 'parent', 'menu-plid', 'menu-plid', 'menu-mlid', TRUE, MENU_MAX_DEPTH - 1);
+    drupal_add_tabledrag('table-' . $element['#id'], 'order', 'sibling', $element['#id'] . '-delta');
+    $output = theme(
+      'table',
+      array(
+        'header' => $header,
+        'rows' => $rows,
+        'attributes' => array(
+          'id' => 'table-' . $element['#id'],
+        ),
+      )
+    );
+    $output .= drupal_render($element['container_multiple_operations']);
+    return $output;
+  }
+  else {
+    $fieldset = array(
+      '#type' => 'fieldset',
+      '#children' => drupal_render_children($element),
+    );
+    $fieldset += $element;
+    return theme('fieldset', array('element' => $fieldset));
+  }
+
+}
