@@ -273,10 +273,16 @@ function container_multiple_element_process($element, &$form_state, $complete_fo
       '#process' => array('ajax_process_form'),
       '#ajax' => $ajax,
     );
-    $element['container_multiple_operations']['remove_' . $element['#id']]['#attached']['js'] = array(array(
-      'type' => 'setting', 
-      'data' => array('ajax' => array('op_remove_' . $element['#id'] => $settings)),
-    ));
+    $element['container_multiple_operations']['remove_' . $element['#id']]['#attached']['js'] = array(
+      array(
+        'type' => 'setting',
+        'data' => array(
+          'ajax' => array(
+            'op_remove_' . $element['#id'] => $settings,
+          ),
+        ),
+      ),
+    );
   }
   return $element;
 
@@ -377,8 +383,22 @@ function theme_container_multiple($variables) {
         $rows[] = $row;
       }
     }
-    //drupal_add_tabledrag('menu-overview', 'match', 'parent', 'menu-plid', 'menu-plid', 'menu-mlid', TRUE, MENU_MAX_DEPTH - 1);
-    drupal_add_tabledrag('table-' . $element['#id'], 'order', 'sibling', $element['#id'] . '-delta');
+    /* drupal_add_tabledrag(
+     * 'menu-overview',
+     * 'match',
+     * 'parent',
+     * 'menu-plid',
+     * 'menu-plid',
+     * 'menu-mlid',
+     * TRUE,
+     * MENU_MAX_DEPTH - 1
+    * ); */
+    drupal_add_tabledrag(
+      'table-' . $element['#id'],
+      'order',
+      'sibling',
+      $element['#id'] . '-delta'
+    );
     $output = theme(
       'table',
       array(
